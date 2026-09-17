@@ -1,0 +1,801 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Configurador de Escenarios Fiscales</title>
+
+<script>
+  // Se aplica antes de que Tailwind escanee el DOM, para que no haya parpadeo claro→oscuro.
+  // Por defecto siempre es oscuro salvo que la persona ya haya elegido "light" antes.
+  (function () {
+    var theme = "dark";
+    try {
+      var saved = localStorage.getItem("configuradorEscenariosFiscales.theme");
+      if (saved === "light" || saved === "dark") theme = saved;
+    } catch (e) { /* localStorage no disponible (modo privado, etc.) */ }
+    document.documentElement.classList.toggle("dark", theme === "dark");
+  })();
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        fontFamily: { sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"] },
+        boxShadow: {
+          card: "0 1px 2px rgba(0,0,0,.04), 0 4px 14px rgba(0,0,0,.06)",
+          cardBig: "0 8px 10px -6px rgba(0,0,0,.15), 0 20px 40px -8px rgba(0,0,0,.18)",
+        },
+      },
+    },
+  };
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+
+<style type="text/tailwindcss">
+  @layer base {
+    html { font-family: theme('fontFamily.sans'); }
+  }
+  @layer components {
+    .btn {
+      @apply inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3.5 py-2
+             text-sm font-medium text-zinc-800 shadow-sm transition-colors
+             hover:bg-zinc-50 active:bg-zinc-100 disabled:pointer-events-none disabled:opacity-50
+             dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800 dark:active:bg-zinc-700;
+    }
+    .btn-primary {
+      @apply border-indigo-600 bg-indigo-600 text-white hover:bg-indigo-500 active:bg-indigo-700
+             dark:border-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-400;
+    }
+    .btn-destructive {
+      @apply border-red-200 bg-white text-red-600 hover:bg-red-50 active:bg-red-100
+             dark:border-red-900/60 dark:bg-zinc-900 dark:text-red-400 dark:hover:bg-red-950/50;
+    }
+    .input {
+      @apply rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-800 shadow-sm
+             placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10
+             dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500
+             dark:focus:ring-white/10;
+    }
+    .badge {
+      @apply inline-flex items-center rounded-md bg-zinc-100 px-1.5 py-0.5 font-mono text-[10.5px]
+             font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300;
+    }
+    .zone {
+      @apply relative flex min-h-[9.5rem] flex-col items-center justify-center gap-1 rounded-2xl border-2
+             border-dashed border-zinc-200 bg-white/70 p-4 text-center transition-all select-none
+             dark:border-zinc-700 dark:bg-zinc-900/60;
+    }
+    .zone-active { @apply scale-105 border-solid shadow-cardBig; }
+    .zone-disclaimer {
+      @apply mt-0.5 rounded-md bg-amber-100 px-1.5 py-0.5 text-[9.5px] font-semibold leading-tight text-amber-700
+             dark:bg-amber-950/60 dark:text-amber-300;
+    }
+  }
+
+  #summaryPanel {
+    transform: translateX(100%);
+  }
+  #summaryPanel.open {
+    transform: translateX(0);
+  }
+</style>
+</head>
+
+<body class="min-h-screen bg-zinc-50 text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-100">
+
+<div class="mx-auto max-w-5xl px-4 py-6 sm:px-6">
+
+  <header class="mb-4" id="pageHeader">
+    <div class="flex items-center justify-between gap-3">
+      <div class="flex items-center gap-2.5">
+        <span class="text-2xl">🗂️</span>
+        <h1 class="text-xl font-bold tracking-tight sm:text-2xl">Configurador de Escenarios Fiscales</h1>
+      </div>
+      <div class="flex shrink-0 items-center gap-2">
+        <button id="themeToggleBtn" class="btn !px-2.5" title="Cambiar tema">🌙</button>
+        <button id="summaryToggleBtn" class="btn">📋 Ver resumen</button>
+      </div>
+    </div>
+    <p class="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
+      Pasa el mouse sobre la vertical a la que pertenece ese movimiento para ver la vista previa y haz
+      <strong class="text-zinc-700 dark:text-zinc-200">click</strong> para categorizarlo ahí (o en
+      <strong class="text-zinc-700 dark:text-zinc-200">Sin categorizar</strong> si no dispara ningún CFDI por
+      sí solo). Tu progreso se guarda automáticamente en este navegador.
+    </p>
+
+    <div class="mt-4 flex flex-wrap items-center gap-2">
+      <input id="authorInput" type="text" class="input w-48" placeholder="Tu nombre (para el export)" />
+      <button id="exportBtn" class="btn btn-primary">⬇️ Exportar CSV</button>
+      <button id="importBtn" class="btn">⬆️ Importar CSV</button>
+      <input type="file" id="importFile" accept="text/csv,.csv" class="hidden" />
+      <button id="undoBtn" class="btn" disabled>↩️ Deshacer</button>
+      <button id="resetBtn" class="btn btn-destructive">↺ Reiniciar todo</button>
+    </div>
+  </header>
+
+  <div id="progressWrap" class="mb-6 flex items-center gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-3 shadow-card dark:border-zinc-800 dark:bg-zinc-900">
+    <div class="h-2 flex-1 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
+      <div id="progressFill" class="h-full w-0 rounded-full bg-indigo-600 dark:bg-indigo-500"></div>
+    </div>
+    <div id="progressLabel" class="whitespace-nowrap text-xs font-medium text-zinc-500 dark:text-zinc-400">0 / 0 categorizados</div>
+  </div>
+
+  <!-- ============================ JUEGO ============================ -->
+  <section id="gameArea">
+    <div id="deckWrap" class="relative mx-auto mb-7 h-56 w-full max-w-xs select-none sm:h-60">
+      <!-- tarjetas fantasma (dan sensación de mazo) -->
+      <div id="ghost2" class="pointer-events-none absolute inset-0 rounded-2xl border border-zinc-200 bg-white shadow-card dark:border-zinc-800 dark:bg-zinc-900"></div>
+      <div id="ghost1" class="pointer-events-none absolute inset-0 rounded-2xl border border-zinc-200 bg-white shadow-card dark:border-zinc-800 dark:bg-zinc-900"></div>
+      <!-- tarjeta activa (se rellena por JS) -->
+      <article id="activeCard" class="absolute inset-0 flex flex-col justify-between rounded-2xl border border-zinc-200 bg-white p-4 shadow-cardBig dark:border-zinc-800 dark:bg-zinc-900"></article>
+      <!-- pantalla de "todo listo" -->
+      <div id="doneCard" class="absolute inset-0 hidden flex-col items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white p-6 text-center shadow-cardBig dark:border-zinc-800 dark:bg-zinc-900">
+        <div class="text-4xl">🎉</div>
+        <div class="text-base font-semibold text-zinc-800 dark:text-zinc-100">¡Todo categorizado!</div>
+        <p class="text-xs text-zinc-500 dark:text-zinc-400">Exporta tu configuración o revisa el resumen para ajustar algo.</p>
+      </div>
+    </div>
+
+    <div id="zones" class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"></div>
+  </section>
+
+  <!-- ============================ RESUMEN (menú lateral colapsable) ============================ -->
+  <div id="summaryBackdrop" class="fixed inset-0 z-40 hidden bg-black/30"></div>
+  <aside id="summaryPanel" class="fixed inset-y-0 right-0 z-50 w-full max-w-sm overflow-y-auto border-l border-zinc-200 bg-zinc-50 p-4 shadow-2xl transition-transform duration-300 dark:border-zinc-800 dark:bg-zinc-950">
+    <div class="mb-4 flex items-center justify-between">
+      <h2 class="text-base font-bold text-zinc-800 dark:text-zinc-100">📋 Resumen por escenario</h2>
+      <button id="summaryCloseBtn" class="btn !px-2.5 !py-1.5">✕</button>
+    </div>
+    <div id="summaryGroups" class="space-y-5"></div>
+  </aside>
+
+  </div>
+
+<div id="toast" class="pointer-events-none fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-zinc-900 px-4 py-2 text-sm font-medium text-white opacity-0 shadow-lg dark:bg-zinc-100 dark:text-zinc-900"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  const STORAGE_KEY = "configuradorEscenariosFiscales.v3";
+  const UNASSIGNED = "sin_categorizar";
+
+  // ---- Definición de escenarios (= zonas de destino del juego) ----------------
+  const SCENARIOS = [
+    {
+      id: "estado_cuenta", name: "Estado de Cuenta", accent: "sky", icon: "📄",
+      sub: "CFDI de Ingresos — método de pago PPD",
+      trigger: "En cada fecha de corte, se toman los movimientos generados en ese periodo y se timbran los siguientes cargos en el PPD correspondiente.",
+    },
+    {
+      id: "complemento", name: "Complemento de pago", accent: "violet", icon: "💳",
+      sub: "CFDI Complemento de Pago",
+      trigger: "Cada vez que se registra uno o varios pagos, hasta cubrir el saldo del último PPD pendiente, se timbran los siguientes cargos.",
+    },
+    {
+      id: "anticipo", name: "Anticipo", accent: "emerald", icon: "⏳",
+      sub: "CFDI de Ingresos — método de pago PUE",
+      trigger: "Solo cuando el PPD ya está cubierto, cada pago adicional recibido timbra los siguientes cargos como anticipo.",
+    },
+    {
+      id: "retenciones", name: "Retenciones", accent: "pink", icon: "🏛️",
+      sub: "CFDI de Retenciones",
+      trigger: "Cuando se ejecuta una garantía, se timbran los siguientes cargos.",
+    },
+    {
+      id: "comisiones", name: "Comisiones", accent: "amber", icon: "💰",
+      sub: "CFDI de Ingresos — método de pago PUE",
+      trigger: "Cuando se genera una disposición, se timbran los siguientes cargos.",
+    },
+    {
+      id: "cancelaciones", name: "Cancelaciones", accent: "rose", icon: "🚫",
+      sub: "CFDI de Egresos / cancelación de CFDI previo",
+      trigger: "Cuando se cancela o corrige un cargo ya timbrado (ej. una comisión mal cobrada), debería generarse el CFDI de cancelación correspondiente.",
+      notImplemented: true,
+      disclaimer: "⚠️ Escenario aún no desarrollado en la plataforma — se agrega aquí solo para que negocio marque su intención; no dispara ningún flujo real todavía.",
+    },
+    {
+      id: UNASSIGNED, name: "Sin categorizar", accent: "slate", icon: "🤷",
+      sub: "No dispara ningún CFDI por sí solo",
+      trigger: "Ningún evento de timbrado — es un ajuste contable sin efecto fiscal directo identificado.",
+    },
+  ];
+
+  // ---- Catálogo de movimientos (nombre, cuenta contable, sugerencia opcional) --
+  // La "sugerencia" es solo una nota de referencia (basada en el análisis previo de la
+  // plataforma) — NO preasigna el movimiento a ningún escenario. Quien use esta
+  // herramienta decide y puede ignorarla por completo.
+  const MOVEMENTS = [
+    { code: "4011", name: "DISPOSICION", hint: "Principal dispuesto — no es, por sí mismo, un concepto facturable." },
+    { code: "4012", name: "ABONO GBM IMPULSO", hint: "Ajuste genérico; sin tratamiento fiscal claro identificado." },
+    { code: "4016", name: "CARGO COMISION POR DISPOSICION", hint: "Coincide con DISBURSEMENT_FEE_CHARGE — la comisión que hoy se timbra vía Comisiones." },
+    { code: "4017", name: "CANCELACION CARGO COMISION POR DISPOSICION", hint: "Corrección/cancelación del cargo anterior — netear contra 4016 si aplica." },
+    { code: "4018", name: "ABONO IVA COMISION POR DISPOSICION", hint: "Liquidación del IVA de la comisión — el CFDI ya lo dispara el CARGO (4020), no este abono." },
+    { code: "4020", name: "CARGO IVA COMISION POR DISPOSICION", hint: "Coincide con DISBURSEMENT_FEE_VAT_CHARGE — IVA de la comisión, vertical Comisiones." },
+    { code: "4021", name: "CANCELACION CARGO IVA COMISION POR DISPOSICION", hint: "Corrección/cancelación del IVA — netear contra 4020 si aplica." },
+    { code: "4022", name: "ABONO A CAPITAL", hint: "Pago a capital — no suele llevar IVA ni concepto facturable propio." },
+    { code: "4023", name: "CARGO A CAPITAL", hint: "Capital dispuesto — se refleja como saldo, no como concepto de interés/comisión facturado." },
+    { code: "4024", name: "ABONO INTERESES ORDINARIOS", hint: "Pago que liquida interés ordinario ya facturado — lo que típicamente alimenta un Complemento." },
+    { code: "4025", name: "ABONO IVA INTERESES ORDINARIOS", hint: "IVA del pago de interés ordinario — mismo razonamiento que 4024." },
+    { code: "4026", name: "CARGO INTERESES ORDINARIOS", hint: "Interés ordinario devengado del periodo — lo que se factura en el corte (Estado de Cuenta)." },
+    { code: "4027", name: "CARGO IVA INTERESES ORDINARIOS", hint: "IVA del interés ordinario devengado — mismo razonamiento que 4026." },
+    { code: "4028", name: "ABONO INTERESES MORATORIOS", hint: "Pago que liquida interés moratorio ya facturado — candidato a Complemento." },
+    { code: "4029", name: "ABONO IVA INTERESES MORATORIOS", hint: "IVA del pago de interés moratorio." },
+    { code: "4030", name: "CARGO INTERESES MORATORIOS", hint: "Interés moratorio devengado — candidato a Estado de Cuenta." },
+    { code: "4031", name: "CARGO IVA INTERESES MORATORIOS", hint: "IVA del interés moratorio devengado." },
+    { code: "4032", name: "ABONO INTERES MORATORIO CAPITAL VENCIDO", hint: "Pago de moratorio sobre capital vencido — candidato a Complemento." },
+    { code: "4033", name: "ABONO IVA INTERES MORATORIO CAP VENC", hint: "IVA del pago anterior." },
+    { code: "4034", name: "CARGO INTERES MORATORIO CAPITAL VENCIDO", hint: "Moratorio sobre capital vencido devengado — candidato a Estado de Cuenta." },
+    { code: "4035", name: "CARGO IVA INTERES MORATORIO CAP VENC", hint: "IVA del devengo anterior." },
+    { code: "4037", name: "CARGO ISR POR EJEC GARANTIAS GBM IMPULSO", hint: "Único candidato natural a Retenciones hoy — pero hoy nada en el sistema lo escribe todavía." },
+    { code: "4040", name: "CARGO A CAPITAL POR EJECUCION", hint: "Capital por ejecución de garantías — no es concepto de interés/comisión facturable." },
+    { code: "4041", name: "ABONO A CAPITAL POR EJECUCION", hint: "Idem, lado de pago." },
+    { code: "4150", name: "CARGO GBM IMPULSO", hint: "Ajuste genérico; sin tratamiento fiscal claro identificado." },
+    { code: "4151", name: "ABONO COMISION POR DISPOSICION", hint: "Liquidación de la comisión — el CFDI ya lo dispara el CARGO (4016), no este abono." },
+  ];
+
+  const scenarioById = new Map(SCENARIOS.map((s) => [s.id, s]));
+  const movementByCode = new Map(MOVEMENTS.map((m) => [m.code, m]));
+
+  // Clases Tailwind explícitas por color de acento (el CDN escanea el DOM en vivo,
+  // así que basta con que existan literalmente en algún lado del árbol).
+  const ACCENT_CLASSES = {
+    sky:     { dot: "bg-sky-500",     soft: "bg-sky-50 dark:bg-sky-950/40",         text: "text-sky-700 dark:text-sky-300",     ring: "ring-sky-400" },
+    violet:  { dot: "bg-violet-500",  soft: "bg-violet-50 dark:bg-violet-950/40",   text: "text-violet-700 dark:text-violet-300", ring: "ring-violet-400" },
+    emerald: { dot: "bg-emerald-500", soft: "bg-emerald-50 dark:bg-emerald-950/40", text: "text-emerald-700 dark:text-emerald-300", ring: "ring-emerald-400" },
+    pink:    { dot: "bg-pink-500",    soft: "bg-pink-50 dark:bg-pink-950/40",       text: "text-pink-700 dark:text-pink-300",   ring: "ring-pink-400" },
+    amber:   { dot: "bg-amber-500",   soft: "bg-amber-50 dark:bg-amber-950/40",     text: "text-amber-700 dark:text-amber-300", ring: "ring-amber-400" },
+    rose:    { dot: "bg-rose-500",    soft: "bg-rose-50 dark:bg-rose-950/40",       text: "text-rose-700 dark:text-rose-300",   ring: "ring-rose-400" },
+    slate:   { dot: "bg-slate-400",   soft: "bg-slate-50 dark:bg-slate-900/50",     text: "text-slate-600 dark:text-slate-300", ring: "ring-slate-400" },
+  };
+
+  // ---- Estado -----------------------------------------------------------------
+  let state = loadState();
+  let forcedNextCode = null; // usado por "Reasignar" desde el resumen
+  let undoStack = [];
+
+  function defaultState() {
+    const assignments = {};
+    MOVEMENTS.forEach((m) => { assignments[m.code] = UNASSIGNED; });
+    return { version: 3, author: "", updatedAt: null, assignments };
+  }
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return defaultState();
+      const parsed = JSON.parse(raw);
+      const merged = defaultState();
+      merged.author = parsed.author || "";
+      merged.updatedAt = parsed.updatedAt || null;
+      Object.assign(merged.assignments, parsed.assignments || {});
+      return merged;
+    } catch (e) {
+      console.warn("No se pudo leer el progreso guardado, empezando limpio.", e);
+      return defaultState();
+    }
+  }
+
+  function persist() {
+    state.updatedAt = new Date().toISOString();
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {
+      console.warn("No se pudo guardar en localStorage (¿modo privado?).", e);
+    }
+  }
+
+  function getQueue() {
+    return MOVEMENTS.filter((m) => (state.assignments[m.code] || UNASSIGNED) === UNASSIGNED_QUEUE_FILTER(m));
+  }
+  // Nota: un movimiento "sin categorizar" explícitamente asignado por el usuario NO debe
+  // volver a aparecer en el mazo — solo los que nunca se han tocado. Por eso el mazo se
+  // deriva de un set de "pendientes" separado, no de comparar contra UNASSIGNED directo.
+  function UNASSIGNED_QUEUE_FILTER() { return true; } // reemplazado abajo por `pending`
+
+  const pending = new Set(
+    Object.keys(state.assignments).length
+      ? MOVEMENTS.filter((m) => state.assignments.__touched && state.assignments.__touched[m.code]).map((m) => m.code)
+      : []
+  );
+
+  // ---- Simplificación del control de "pendientes" ------------------------------
+  // Se guarda un set explícito de códigos ya resueltos por el usuario (independiente
+  // de a qué escenario quedaron asignados, incluyendo "Sin categorizar").
+  if (!state.resolved) state.resolved = {};
+  MOVEMENTS.forEach((m) => {
+    if (state.assignments[m.code] && state.assignments[m.code] !== UNASSIGNED) {
+      state.resolved[m.code] = true;
+    }
+  });
+
+  function isResolved(code) { return !!state.resolved[code]; }
+  function markResolved(code) { state.resolved[code] = true; }
+  function markUnresolved(code) { delete state.resolved[code]; }
+
+  function getDeckQueue() {
+    return MOVEMENTS.filter((m) => !isResolved(m.code)).map((m) => m.code);
+  }
+
+  // ---- DOM refs -----------------------------------------------------------------
+  const authorInput = document.getElementById("authorInput");
+  authorInput.value = state.author || "";
+  const deckWrap = document.getElementById("deckWrap");
+  const activeCardEl = document.getElementById("activeCard");
+  const doneCardEl = document.getElementById("doneCard");
+  const ghost1 = document.getElementById("ghost1");
+  const ghost2 = document.getElementById("ghost2");
+  const zonesEl = document.getElementById("zones");
+  const gameArea = document.getElementById("gameArea");
+  const summaryPanel = document.getElementById("summaryPanel");
+  const summaryGroups = document.getElementById("summaryGroups");
+  const summaryToggleBtn = document.getElementById("summaryToggleBtn");
+  const undoBtn = document.getElementById("undoBtn");
+  const themeToggleBtn = document.getElementById("themeToggleBtn");
+
+  // ---- Tema (claro/oscuro, por defecto oscuro) ---------------------------------
+  const THEME_KEY = "configuradorEscenariosFiscales.theme";
+  function currentTheme() { return document.documentElement.classList.contains("dark") ? "dark" : "light"; }
+  function applyTheme(theme) {
+    document.documentElement.classList.toggle("dark", theme === "dark");
+    themeToggleBtn.textContent = theme === "dark" ? "🌙" : "☀️";
+    try { localStorage.setItem(THEME_KEY, theme); } catch (e) { /* ignore */ }
+  }
+  applyTheme(currentTheme());
+  themeToggleBtn.addEventListener("click", () => applyTheme(currentTheme() === "dark" ? "light" : "dark"));
+
+  // ---- Construcción de zonas (una sola vez) -------------------------------------
+  function renderZones() {
+    zonesEl.innerHTML = "";
+    SCENARIOS.forEach((scenario) => {
+      const accent = ACCENT_CLASSES[scenario.accent];
+      const zone = document.createElement("div");
+      zone.className = `zone ${accent.soft}`;
+      zone.dataset.scenario = scenario.id;
+      zone.dataset.accentRing = accent.ring;
+      zone.innerHTML = `
+        <span class="text-2xl">${scenario.icon}</span>
+        <span class="text-xs font-semibold ${accent.text}">${scenario.name}</span>
+        <span class="text-[10px] font-medium text-zinc-500 dark:text-zinc-400">${scenario.sub}</span>
+        <span class="text-[10px] leading-snug text-zinc-400 dark:text-zinc-500">${scenario.trigger}</span>
+        ${scenario.notImplemented ? `<span class="zone-disclaimer">${scenario.disclaimer}</span>` : ""}
+        <span class="text-[10px] text-zinc-400 dark:text-zinc-500" data-count>0/${MOVEMENTS.length}</span>
+      `;
+      zone.addEventListener("mouseenter", () => previewTowardZone(zone));
+      zone.addEventListener("mouseleave", () => clearActiveZonePreview());
+      zone.addEventListener("click", () => {
+        const code = getActiveCode();
+        if (code) flyCardTo(code, scenario.id, zone);
+      });
+      zonesEl.appendChild(zone);
+    });
+    updateZoneCounts();
+  }
+
+  function updateZoneCounts() {
+    SCENARIOS.forEach((scenario) => {
+      const count = MOVEMENTS.filter((m) => isResolved(m.code) && state.assignments[m.code] === scenario.id).length;
+      const zone = zonesEl.querySelector(`[data-scenario="${scenario.id}"] [data-count]`);
+      if (zone) zone.textContent = `${count}/${MOVEMENTS.length}`;
+    });
+  }
+
+  // ---- Tarjeta activa -------------------------------------------------------
+  function getActiveCode() {
+    if (forcedNextCode && !isResolved(forcedNextCode)) return forcedNextCode;
+    forcedNextCode = null;
+    const queue = getDeckQueue();
+    return queue[0] || null;
+  }
+
+  function paintCard(el, movement) {
+    el.innerHTML = `
+      <div>
+        <span class="badge">${movement.code}</span>
+        <div class="mt-2 text-base font-semibold leading-snug text-zinc-800 dark:text-zinc-100">${movement.name}</div>
+      </div>
+      <div class="rounded-lg bg-zinc-50 px-3 py-2 text-xs leading-relaxed text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+        💡 ${movement.hint}
+      </div>
+    `;
+  }
+
+  function showActiveCard({ animateIn = false } = {}) {
+    const code = getActiveCode();
+
+    if (!code) {
+      activeCardEl.classList.add("hidden");
+      activeCardEl.dataset.code = "";
+      ghost1.classList.add("hidden");
+      ghost2.classList.add("hidden");
+      doneCardEl.classList.remove("hidden");
+      doneCardEl.classList.add("flex");
+      return;
+    }
+
+    doneCardEl.classList.add("hidden");
+    doneCardEl.classList.remove("flex");
+    activeCardEl.classList.remove("hidden");
+
+    const remaining = getDeckQueue().length;
+    ghost1.classList.toggle("hidden", remaining < 2);
+    ghost2.classList.toggle("hidden", remaining < 3);
+
+    const movement = movementByCode.get(code);
+    paintCard(activeCardEl, movement);
+    activeCardEl.dataset.code = code;
+
+    gsap.set(activeCardEl, { x: 0, y: 0, rotation: 0, opacity: animateIn ? 0 : 1, scale: animateIn ? 0.9 : 1 });
+    if (animateIn) {
+      gsap.to(activeCardEl, { opacity: 1, scale: 1, duration: 0.28, ease: "back.out(1.6)" });
+    }
+  }
+
+  // La tarjeta ya no se arrastra: al pasar el mouse sobre una vertical, la tarjeta se
+  // inclina/asoma hacia esa zona como vista previa de "aquí caería" — el click confirma.
+  function previewTowardZone(zoneEl) {
+    if (!activeCardEl.dataset.code) return;
+
+    const ring = zoneEl.dataset.accentRing;
+    zoneEl.classList.add("zone-active", ring, "ring-4");
+
+    const cardRect = activeCardEl.getBoundingClientRect();
+    const zoneRect = zoneEl.getBoundingClientRect();
+    const dx = (zoneRect.left + zoneRect.width / 2) - (cardRect.left + cardRect.width / 2);
+    const dy = (zoneRect.top + zoneRect.height / 2) - (cardRect.top + cardRect.height / 2);
+    const dist = Math.hypot(dx, dy) || 1;
+
+    gsap.to(activeCardEl, {
+      x: (dx / dist) * 20,
+      y: (dy / dist) * 16,
+      rotation: gsap.utils.clamp(-10, 10, dx * 0.02),
+      duration: 0.3,
+      ease: "power2.out",
+    });
+  }
+
+  function clearActiveZonePreview() {
+    zonesEl.querySelectorAll(".zone").forEach((zone) => {
+      zone.classList.remove("zone-active", "ring-4");
+      zone.classList.remove(zone.dataset.accentRing);
+    });
+    gsap.to(activeCardEl, { x: 0, y: 0, rotation: 0, duration: 0.3, ease: "power2.out" });
+  }
+
+  // Anima la tarjeta hacia la zona elegida y confirma la asignación al terminar.
+  function flyCardTo(code, scenarioId, zoneEl) {
+    const cardRect = activeCardEl.getBoundingClientRect();
+    const zoneRect = zoneEl.getBoundingClientRect();
+    const dx = (zoneRect.left + zoneRect.width / 2) - (cardRect.left + cardRect.width / 2);
+    const dy = (zoneRect.top + zoneRect.height / 2) - (cardRect.top + cardRect.height / 2);
+    const currentX = gsap.getProperty(activeCardEl, "x");
+    const currentY = gsap.getProperty(activeCardEl, "y");
+
+    gsap.to(activeCardEl, {
+      x: currentX + dx,
+      y: currentY + dy,
+      scale: 0.25,
+      opacity: 0,
+      duration: 0.35,
+      ease: "power2.in",
+      onComplete: () => confirmAssign(code, scenarioId),
+    });
+
+    gsap.fromTo(zoneEl, { scale: 1 }, { scale: 1.08, duration: 0.15, yoyo: true, repeat: 1, ease: "power1.out" });
+  }
+
+  function confirmAssign(code, scenarioId) {
+    pushUndo(code);
+    state.assignments[code] = scenarioId;
+    markResolved(code);
+    persist();
+    updateZoneCounts();
+    updateProgress({ animate: true });
+    clearActiveZonePreview();
+    showActiveCard({ animateIn: true });
+  }
+
+  // ---- Deshacer -----------------------------------------------------------------
+  function pushUndo(code) {
+    undoStack.push({ code, prevAssignment: state.assignments[code], prevResolved: isResolved(code) });
+    if (undoStack.length > 50) undoStack.shift();
+    undoBtn.disabled = undoStack.length === 0;
+  }
+
+  function undoLast() {
+    const entry = undoStack.pop();
+    undoBtn.disabled = undoStack.length === 0;
+    if (!entry) return;
+
+    state.assignments[entry.code] = entry.prevAssignment;
+    if (entry.prevResolved) markResolved(entry.code); else markUnresolved(entry.code);
+    persist();
+    updateZoneCounts();
+    updateProgress({ animate: true });
+    forcedNextCode = entry.code;
+    showActiveCard({ animateIn: true });
+    showToast(`Se deshizo: "${movementByCode.get(entry.code).name}".`);
+  }
+
+  undoBtn.addEventListener("click", undoLast);
+
+  // ---- Progreso -----------------------------------------------------------------
+  let wasComplete = false;
+  function updateProgress({ animate = false } = {}) {
+    const total = MOVEMENTS.length;
+    const done = MOVEMENTS.filter((m) => isResolved(m.code)).length;
+    const pct = total ? (done / total) * 100 : 0;
+
+    document.getElementById("progressLabel").textContent = `${done} / ${total} categorizados`;
+    gsap.to("#progressFill", { width: `${pct}%`, duration: animate ? 0.5 : 0, ease: "power2.out" });
+
+    if (done === total && total > 0) {
+      if (!wasComplete) celebrate();
+      wasComplete = true;
+    } else {
+      wasComplete = false;
+    }
+  }
+
+  function celebrate() {
+    showToast("🎉 ¡Todos los movimientos están categorizados!");
+    gsap.fromTo("#progressWrap", { scale: 1 }, { scale: 1.03, duration: 0.18, ease: "power1.out", yoyo: true, repeat: 1 });
+  }
+
+  // ---- Resumen ------------------------------------------------------------------
+  function renderSummary() {
+    summaryGroups.innerHTML = "";
+    SCENARIOS.forEach((scenario) => {
+      const accent = ACCENT_CLASSES[scenario.accent];
+      const items = MOVEMENTS.filter((m) => isResolved(m.code) && state.assignments[m.code] === scenario.id);
+
+      const group = document.createElement("div");
+      group.className = "rounded-xl border border-zinc-200 bg-white shadow-card dark:border-zinc-800 dark:bg-zinc-900";
+      group.innerHTML = `
+        <div class="flex items-center gap-2 border-b border-zinc-100 p-3 dark:border-zinc-800">
+          <span class="h-2.5 w-2.5 rounded-full ${accent.dot}"></span>
+          <span class="text-sm font-semibold text-zinc-800 dark:text-zinc-100">${scenario.icon} ${scenario.name}</span>
+          <span class="ml-auto text-xs text-zinc-400 dark:text-zinc-500">${items.length} movimiento${items.length === 1 ? "" : "s"}</span>
+        </div>
+        <div class="divide-y divide-zinc-100 dark:divide-zinc-800" data-list></div>
+      `;
+      const list = group.querySelector("[data-list]");
+      if (items.length === 0) {
+        list.innerHTML = `<div class="p-3 text-xs text-zinc-400 dark:text-zinc-500">Nada categorizado aquí todavía.</div>`;
+      } else {
+        items.forEach((m) => {
+          const row = document.createElement("div");
+          row.className = "flex items-center gap-3 p-3";
+          row.innerHTML = `
+            <span class="badge">${m.code}</span>
+            <span class="flex-1 text-sm text-zinc-700 dark:text-zinc-300">${m.name}</span>
+            <button class="btn !px-2.5 !py-1 text-xs" data-reassign="${m.code}">↺ Reasignar</button>
+          `;
+          list.appendChild(row);
+        });
+      }
+      summaryGroups.appendChild(group);
+    });
+
+    summaryGroups.querySelectorAll("[data-reassign]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const code = btn.dataset.reassign;
+        pushUndo(code);
+        markUnresolved(code);
+        persist();
+        updateZoneCounts();
+        updateProgress();
+        forcedNextCode = code;
+        showSummary(false);
+        showToast(`"${movementByCode.get(code).name}" vuelve al mazo.`);
+      });
+    });
+  }
+
+  function showSummary(show) {
+    summaryPanel.classList.toggle("open", show);
+    summaryBackdrop.classList.toggle("hidden", !show);
+    summaryToggleBtn.textContent = show ? "✕ Cerrar resumen" : "📋 Ver resumen";
+    if (show) {
+      renderSummary();
+      gsap.from(summaryGroups.children, { opacity: 0, y: 10, stagger: 0.05, duration: 0.3, ease: "power2.out" });
+    }
+  }
+
+  const summaryBackdrop = document.getElementById("summaryBackdrop");
+  const summaryCloseBtn = document.getElementById("summaryCloseBtn");
+
+  summaryToggleBtn.addEventListener("click", () => {
+    showSummary(!summaryPanel.classList.contains("open"));
+  });
+  summaryCloseBtn.addEventListener("click", () => showSummary(false));
+  summaryBackdrop.addEventListener("click", () => showSummary(false));
+
+  // ---- Toast ----------------------------------------------------------------
+  let toastTimer = null;
+  function showToast(message) {
+    const toast = document.getElementById("toast");
+    toast.textContent = message;
+    clearTimeout(toastTimer);
+    gsap.killTweensOf(toast);
+    gsap.fromTo(toast, { opacity: 0, y: 10, scale: 0.96 }, { opacity: 1, y: 0, scale: 1, duration: 0.28, ease: "back.out(1.6)" });
+    toastTimer = setTimeout(() => gsap.to(toast, { opacity: 0, y: 10, duration: 0.25, ease: "power1.in" }), 2400);
+  }
+
+  // ---- Autor ------------------------------------------------------------------
+  authorInput.addEventListener("change", () => {
+    state.author = authorInput.value.trim();
+    persist();
+  });
+
+  // ---- CSV: construir / parsear ------------------------------------------------
+  function csvEscape(value) {
+    const str = String(value ?? "");
+    if (/[",\r\n]/.test(str)) return '"' + str.replace(/"/g, '""') + '"';
+    return str;
+  }
+
+  function buildCsv() {
+    const lines = [];
+    lines.push(`# Autor,${csvEscape(state.author || "")}`);
+    lines.push(`# ExportadoEn,${new Date().toISOString()}`);
+    lines.push(["Codigo", "Movimiento", "Escenario"].join(","));
+    MOVEMENTS.forEach((m) => {
+      const scenarioId = isResolved(m.code) ? state.assignments[m.code] : "";
+      const scenario = scenarioById.get(scenarioId);
+      lines.push([csvEscape(m.code), csvEscape(m.name), csvEscape(scenario ? scenario.name : "")].join(","));
+    });
+    return lines.join("\r\n");
+  }
+
+  function parseCsv(text) {
+    const rows = [];
+    let row = [];
+    let field = "";
+    let inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (inQuotes) {
+        if (c === '"') {
+          if (text[i + 1] === '"') { field += '"'; i++; }
+          else { inQuotes = false; }
+        } else { field += c; }
+        continue;
+      }
+      if (c === '"') { inQuotes = true; }
+      else if (c === ',') { row.push(field); field = ""; }
+      else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ""; }
+      else if (c === '\r') { /* el \n siguiente cierra la fila */ }
+      else { field += c; }
+    }
+    if (field.length > 0 || row.length > 0) { row.push(field); rows.push(row); }
+    return rows.filter((r) => r.some((cell) => cell !== ""));
+  }
+
+  document.getElementById("exportBtn").addEventListener("click", () => {
+    state.author = authorInput.value.trim();
+    persist();
+    const csv = buildCsv();
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+    a.href = url;
+    a.download = `escenarios-fiscales_${stamp}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    showToast("Configuración exportada (CSV).");
+  });
+
+  const importFile = document.getElementById("importFile");
+  document.getElementById("importBtn").addEventListener("click", () => importFile.click());
+  importFile.addEventListener("change", () => {
+    const file = importFile.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        applyImportedCsv(reader.result);
+        showToast(`Configuración de "${file.name}" importada.`);
+      } catch (e) {
+        alert("No se pudo leer ese archivo como configuración válida.\n" + e.message);
+      }
+      importFile.value = "";
+    };
+    reader.readAsText(file);
+  });
+
+  function applyImportedCsv(text) {
+    const rows = parseCsv(text);
+    let author = "";
+    let headerIndex = -1;
+    for (let i = 0; i < rows.length; i++) {
+      const first = (rows[i][0] || "").trim();
+      if (first === "# Autor") author = (rows[i][1] || "").trim();
+      if (first === "Codigo") { headerIndex = i; break; }
+    }
+    if (headerIndex === -1) {
+      throw new Error('No se encontró el encabezado "Codigo,Movimiento,Escenario" en el archivo.');
+    }
+
+    const scenarioByName = new Map(SCENARIOS.map((s) => [s.name.trim().toLowerCase(), s.id]));
+    let matched = 0;
+    for (let i = headerIndex + 1; i < rows.length; i++) {
+      const [code, , scenarioName] = rows[i];
+      if (!code || !movementByCode.has(code)) continue;
+      const trimmedName = (scenarioName || "").trim();
+      if (!trimmedName) { markUnresolved(code); continue; }
+      const scenarioId = scenarioByName.get(trimmedName.toLowerCase());
+      if (!scenarioId) continue;
+      state.assignments[code] = scenarioId;
+      markResolved(code);
+      matched++;
+    }
+
+    if (matched === 0) {
+      throw new Error("No se reconoció ningún movimiento/escenario válido en el archivo.");
+    }
+
+    if (author) {
+      state.author = author;
+      authorInput.value = author;
+    }
+    persist();
+    updateZoneCounts();
+    updateProgress({ animate: true });
+    showActiveCard({ animateIn: true });
+  }
+
+  // ---- Reiniciar ------------------------------------------------------------
+  document.getElementById("resetBtn").addEventListener("click", () => {
+    if (!confirm("¿Reiniciar toda la categorización? Esto no se puede deshacer.")) return;
+    state = defaultState();
+    state.resolved = {};
+    forcedNextCode = null;
+    wasComplete = false;
+    undoStack = [];
+    undoBtn.disabled = true;
+    authorInput.value = "";
+    persist();
+    updateZoneCounts();
+    updateProgress();
+    showSummary(false);
+    showToast("Configuración reiniciada.");
+  });
+
+  // ---- Bonus: cargar configuración desde una URL (?config=<url-raw-csv>) -------
+  (function loadFromQueryParam() {
+    const params = new URLSearchParams(window.location.search);
+    const configUrl = params.get("config");
+    if (!configUrl) return;
+    fetch(configUrl)
+      .then((res) => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.text(); })
+      .then((text) => { applyImportedCsv(text); showToast("Configuración cargada desde el enlace compartido."); })
+      .catch((e) => {
+        console.warn("No se pudo cargar la configuración desde ?config=", e);
+        showToast("No se pudo cargar la configuración del enlace (revisa la consola).");
+      });
+  })();
+
+  // ---- Arranque -----------------------------------------------------------------
+  gsap.set("#pageHeader", { opacity: 0, y: -10 });
+  gsap.to("#pageHeader", { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" });
+
+  renderZones();
+  updateProgress();
+  showActiveCard({ animateIn: true });
+})();
+</script>
+</body>
+</html>
