@@ -80,31 +80,44 @@
              dark:bg-amber-950/60 dark:text-amber-300;
     }
   }
+
+  @keyframes gradient-text-shift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+  .animate-gradient-text {
+    animation: gradient-text-shift 6s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .animate-gradient-text { animation: none; }
+  }
 </style>
 </head>
 
 <body class="min-h-screen bg-zinc-50 text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-100">
 
-<div class="mx-auto max-w-5xl px-4 py-6 sm:px-6">
+<div id="pageWrap" class="mx-auto max-w-5xl px-4 py-6 sm:px-6">
 
   <header class="mb-4" id="pageHeader">
     <div class="flex items-center justify-between gap-3">
       <div class="flex items-center gap-2.5">
-        <span class="text-2xl">🗂️</span>
-        <h1 class="text-xl font-bold tracking-tight sm:text-2xl">Configurador de Escenarios Fiscales</h1>
+        <span id="headerEmoji" class="inline-block text-2xl">🗂️</span>
+        <h1 id="headerTitle" class="animate-gradient-text bg-[length:200%_auto] bg-gradient-to-r from-indigo-500 via-violet-500 to-emerald-500 bg-clip-text text-xl font-extrabold tracking-tight text-transparent sm:text-2xl">
+          Configurador de Escenarios Fiscales
+        </h1>
       </div>
       <div class="flex shrink-0 items-center gap-2">
         <button id="themeToggleBtn" class="btn !px-2.5" title="Cambiar tema">🌙</button>
       </div>
     </div>
-    <p class="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
+    <p id="headerSub" class="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
       Pasa el mouse sobre la vertical a la que pertenece ese movimiento para ver la vista previa y haz
       <strong class="text-zinc-700 dark:text-zinc-200">click</strong> para categorizarlo ahí (o en
       <strong class="text-zinc-700 dark:text-zinc-200">Sin categorizar</strong> si no dispara ningún CFDI por
       sí solo). Tu progreso se guarda automáticamente en este navegador.
     </p>
 
-    <div class="mt-4 flex flex-wrap items-center gap-2">
+    <div id="headerActions" class="mt-4 flex flex-wrap items-center gap-2">
       <input id="authorInput" type="text" class="input w-48" placeholder="Tu nombre (para el export)" />
       <button id="exportBtn" class="btn btn-primary">⬇️ Exportar CSV</button>
       <button id="importBtn" class="btn">⬆️ Importar CSV</button>
@@ -624,10 +637,14 @@
   const FAIL_EMOJIS = ["😅", "🙈", "💥", "🫠", "😬", "🤦", "⏪"];
 
   function failEvent() {
+    // Se anima #pageWrap (no <body>) porque un transform en <body> crearía un nuevo
+    // "containing block" para los overlays position:fixed que cuelgan de <body>
+    // (stamp, emojis, toasts) y los desalinearía del viewport real en cuanto la
+    // página estuviera scrolleada — muy notorio en mobile con el layout apilado.
     gsap.fromTo(
-      "body",
+      "#pageWrap",
       { x: 0 },
-      { x: 7, duration: 0.05, repeat: 5, yoyo: true, ease: "power1.inOut", onComplete: () => gsap.set("body", { x: 0 }) }
+      { x: 7, duration: 0.05, repeat: 5, yoyo: true, ease: "power1.inOut", onComplete: () => gsap.set("#pageWrap", { x: 0 }) }
     );
 
     const stamp = document.createElement("div");
@@ -677,9 +694,9 @@
 
   function successEvent() {
     gsap.fromTo(
-      "body",
+      "#pageWrap",
       { scale: 1 },
-      { scale: 1.012, duration: 0.09, repeat: 3, yoyo: true, ease: "power1.inOut", onComplete: () => gsap.set("body", { scale: 1 }) }
+      { scale: 1.012, duration: 0.09, repeat: 3, yoyo: true, ease: "power1.inOut", onComplete: () => gsap.set("#pageWrap", { scale: 1 }) }
     );
 
     const stamp = document.createElement("div");
@@ -1116,8 +1133,27 @@
   })();
 
   // ---- Arranque -----------------------------------------------------------------
-  gsap.set("#pageHeader", { opacity: 0, y: -10 });
-  gsap.to("#pageHeader", { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" });
+  gsap.set("#headerEmoji", { opacity: 0, scale: 0.4, rotation: -25 });
+  gsap.set("#headerTitle", { opacity: 0, y: -8 });
+  gsap.set("#headerSub", { opacity: 0, y: -6 });
+  gsap.set("#headerActions > *", { opacity: 0, y: 8 });
+
+  gsap.timeline()
+    .to("#headerEmoji", { opacity: 1, scale: 1, rotation: 0, duration: 0.45, ease: "back.out(2.2)" })
+    .to("#headerTitle", { opacity: 1, y: 0, duration: 0.35, ease: "power2.out" }, "-=0.2")
+    .to("#headerSub", { opacity: 1, y: 0, duration: 0.35, ease: "power2.out" }, "-=0.15")
+    .to("#headerActions > *", { opacity: 1, y: 0, duration: 0.3, stagger: 0.05, ease: "power2.out" }, "-=0.1");
+
+  // Balanceo perpetuo del emoji del encabezado — un pequeño toque de vida constante.
+  gsap.to("#headerEmoji", {
+    rotation: 14,
+    y: -2,
+    duration: 1.6,
+    ease: "sine.inOut",
+    yoyo: true,
+    repeat: -1,
+    delay: 1,
+  });
 
   renderZones();
   updateProgress();
