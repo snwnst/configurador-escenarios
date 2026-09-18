@@ -80,13 +80,6 @@
              dark:bg-amber-950/60 dark:text-amber-300;
     }
   }
-
-  #summaryPanel {
-    transform: translateX(100%);
-  }
-  #summaryPanel.open {
-    transform: translateX(0);
-  }
 </style>
 </head>
 
@@ -102,7 +95,6 @@
       </div>
       <div class="flex shrink-0 items-center gap-2">
         <button id="themeToggleBtn" class="btn !px-2.5" title="Cambiar tema">🌙</button>
-        <button id="summaryToggleBtn" class="btn">📋 Ver resumen</button>
       </div>
     </div>
     <p class="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
@@ -129,38 +121,49 @@
     <div id="progressLabel" class="whitespace-nowrap text-xs font-medium text-zinc-500 dark:text-zinc-400">0 / 0 categorizados</div>
   </div>
 
-  <!-- ============================ JUEGO ============================ -->
-  <section id="gameArea">
-    <div id="deckWrap" class="relative mx-auto mb-7 h-56 w-full max-w-xs select-none sm:h-60">
-      <!-- tarjetas fantasma (dan sensación de mazo) -->
-      <div id="ghost2" class="pointer-events-none absolute inset-0 rounded-2xl border border-zinc-200 bg-white shadow-card dark:border-zinc-800 dark:bg-zinc-900"></div>
-      <div id="ghost1" class="pointer-events-none absolute inset-0 rounded-2xl border border-zinc-200 bg-white shadow-card dark:border-zinc-800 dark:bg-zinc-900"></div>
-      <!-- tarjeta activa (se rellena por JS) -->
-      <article id="activeCard" class="absolute inset-0 flex flex-col justify-between rounded-2xl border border-zinc-200 bg-white p-4 shadow-cardBig dark:border-zinc-800 dark:bg-zinc-900"></article>
-      <!-- pantalla de "todo listo" -->
-      <div id="doneCard" class="absolute inset-0 hidden flex-col items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white p-6 text-center shadow-cardBig dark:border-zinc-800 dark:bg-zinc-900">
-        <div class="text-4xl">🎉</div>
-        <div class="text-base font-semibold text-zinc-800 dark:text-zinc-100">¡Todo categorizado!</div>
-        <p class="text-xs text-zinc-500 dark:text-zinc-400">Exporta tu configuración o revisa el resumen para ajustar algo.</p>
+  <div class="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_340px] lg:items-start">
+    <!-- ============================ JUEGO ============================ -->
+    <section id="gameArea">
+      <div id="deckWrap" class="relative mx-auto mb-7 h-56 w-full max-w-xs select-none sm:h-60">
+        <!-- tarjetas fantasma (dan sensación de mazo) -->
+        <div id="ghost2" class="pointer-events-none absolute inset-0 rounded-2xl border border-zinc-200 bg-white shadow-card dark:border-zinc-800 dark:bg-zinc-900"></div>
+        <div id="ghost1" class="pointer-events-none absolute inset-0 rounded-2xl border border-zinc-200 bg-white shadow-card dark:border-zinc-800 dark:bg-zinc-900"></div>
+        <!-- tarjeta activa (se rellena por JS) -->
+        <article id="activeCard" class="absolute inset-0 flex flex-col justify-between rounded-2xl border border-zinc-200 bg-white p-4 shadow-cardBig dark:border-zinc-800 dark:bg-zinc-900"></article>
+        <!-- pantalla de "todo listo" -->
+        <div id="doneCard" class="absolute inset-0 hidden flex-col items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white p-6 text-center shadow-cardBig dark:border-zinc-800 dark:bg-zinc-900">
+          <div class="text-4xl">🎉</div>
+          <div class="text-base font-semibold text-zinc-800 dark:text-zinc-100">¡Todo categorizado!</div>
+          <p class="text-xs text-zinc-500 dark:text-zinc-400">Exporta tu configuración o revisa el resumen a la derecha.</p>
+        </div>
       </div>
-    </div>
 
-    <div id="zones" class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"></div>
-  </section>
+      <div id="zones" class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"></div>
+    </section>
 
-  <!-- ============================ RESUMEN (menú lateral colapsable) ============================ -->
-  <div id="summaryBackdrop" class="fixed inset-0 z-40 hidden bg-black/30"></div>
-  <aside id="summaryPanel" class="fixed inset-y-0 right-0 z-50 w-full max-w-sm overflow-y-auto border-l border-zinc-200 bg-zinc-50 p-4 shadow-2xl transition-transform duration-300 dark:border-zinc-800 dark:bg-zinc-950">
-    <div class="mb-4 flex items-center justify-between">
-      <h2 class="text-base font-bold text-zinc-800 dark:text-zinc-100">📋 Resumen por escenario</h2>
-      <button id="summaryCloseBtn" class="btn !px-2.5 !py-1.5">✕</button>
-    </div>
-    <div id="summaryGroups" class="space-y-5"></div>
-  </aside>
-
+    <!-- ============================ RESUMEN (siempre visible) ============================ -->
+    <aside id="summaryPanel" class="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 shadow-card dark:border-zinc-800 dark:bg-zinc-900 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto">
+      <h2 class="mb-4 text-base font-bold text-zinc-800 dark:text-zinc-100">📋 Resumen por escenario</h2>
+      <div id="summaryGroups" class="space-y-5"></div>
+    </aside>
+  </div>
   </div>
 
 <div id="toast" class="pointer-events-none fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-zinc-900 px-4 py-2 text-sm font-medium text-white opacity-0 shadow-lg dark:bg-zinc-100 dark:text-zinc-900"></div>
+
+<div id="confirmBackdrop" class="fixed inset-0 z-[70] hidden items-center justify-center bg-black/50 p-4">
+  <div id="confirmBox" class="w-full max-w-sm rounded-2xl border border-zinc-200 bg-white p-5 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900">
+    <div class="mb-2 flex items-center gap-2.5">
+      <span id="confirmIcon" class="text-2xl">⚠️</span>
+      <h3 id="confirmTitle" class="text-base font-bold text-zinc-800 dark:text-zinc-100">¿Estás seguro?</h3>
+    </div>
+    <p id="confirmMessage" class="mb-5 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400"></p>
+    <div class="flex justify-end gap-2">
+      <button id="confirmCancelBtn" class="btn">Cancelar</button>
+      <button id="confirmOkBtn" class="btn btn-destructive">Confirmar</button>
+    </div>
+  </div>
+</div>
 
 <script>
 (function () {
@@ -336,9 +339,7 @@
   const ghost2 = document.getElementById("ghost2");
   const zonesEl = document.getElementById("zones");
   const gameArea = document.getElementById("gameArea");
-  const summaryPanel = document.getElementById("summaryPanel");
   const summaryGroups = document.getElementById("summaryGroups");
-  const summaryToggleBtn = document.getElementById("summaryToggleBtn");
   const undoBtn = document.getElementById("undoBtn");
   const themeToggleBtn = document.getElementById("themeToggleBtn");
 
@@ -352,6 +353,54 @@
   }
   applyTheme(currentTheme());
   themeToggleBtn.addEventListener("click", () => applyTheme(currentTheme() === "dark" ? "light" : "dark"));
+
+  // ---- Diálogo de confirmación propio (reemplaza confirm() del navegador) --------
+  const confirmBackdrop = document.getElementById("confirmBackdrop");
+  const confirmBox = document.getElementById("confirmBox");
+  const confirmTitleEl = document.getElementById("confirmTitle");
+  const confirmMessageEl = document.getElementById("confirmMessage");
+  const confirmOkBtn = document.getElementById("confirmOkBtn");
+  const confirmCancelBtn = document.getElementById("confirmCancelBtn");
+  let confirmResolve = null;
+
+  function showConfirm({ title, message, confirmLabel = "Confirmar" }) {
+    return new Promise((resolve) => {
+      confirmResolve = resolve;
+      confirmTitleEl.textContent = title;
+      confirmMessageEl.textContent = message;
+      confirmOkBtn.textContent = confirmLabel;
+      confirmBackdrop.classList.remove("hidden");
+      confirmBackdrop.classList.add("flex");
+      gsap.fromTo(confirmBackdrop, { opacity: 0 }, { opacity: 1, duration: 0.2, ease: "power1.out" });
+      gsap.fromTo(confirmBox, { opacity: 0, y: 16, scale: 0.92 }, { opacity: 1, y: 0, scale: 1, duration: 0.32, ease: "back.out(1.6)" });
+    });
+  }
+
+  function closeConfirm(result) {
+    if (confirmBackdrop.classList.contains("hidden")) return;
+    gsap.to(confirmBox, { opacity: 0, y: 10, scale: 0.95, duration: 0.16, ease: "power1.in" });
+    gsap.to(confirmBackdrop, {
+      opacity: 0,
+      duration: 0.16,
+      ease: "power1.in",
+      onComplete: () => {
+        confirmBackdrop.classList.add("hidden");
+        confirmBackdrop.classList.remove("flex");
+        const resolve = confirmResolve;
+        confirmResolve = null;
+        if (resolve) resolve(result);
+      },
+    });
+  }
+
+  confirmOkBtn.addEventListener("click", () => closeConfirm(true));
+  confirmCancelBtn.addEventListener("click", () => closeConfirm(false));
+  confirmBackdrop.addEventListener("click", (event) => {
+    if (event.target === confirmBackdrop) closeConfirm(false);
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !confirmBackdrop.classList.contains("hidden")) closeConfirm(false);
+  });
 
   // ---- Construcción de zonas (una sola vez) -------------------------------------
   function renderZones() {
@@ -487,10 +536,48 @@
       opacity: 0,
       duration: 0.35,
       ease: "power2.in",
-      onComplete: () => confirmAssign(code, scenarioId),
+      onComplete: () => {
+        assignEvent(zoneEl);
+        confirmAssign(code, scenarioId);
+      },
     });
 
     gsap.fromTo(zoneEl, { scale: 1 }, { scale: 1.08, duration: 0.15, yoyo: true, repeat: 1, ease: "power1.out" });
+  }
+
+  // Pequeño chispazo cada vez que una tarjeta aterriza en una zona: un puñado de
+  // sparkles saliendo del punto de aterrizaje.
+  const ASSIGN_EMOJIS = ["✨", "⭐", "👍", "🎯"];
+
+  function assignEvent(zoneEl) {
+    const rect = zoneEl.getBoundingClientRect();
+    const originX = rect.left + rect.width / 2;
+    const originY = rect.top + rect.height / 2;
+
+    for (let i = 0; i < 8; i++) {
+      const span = document.createElement("span");
+      span.textContent = ASSIGN_EMOJIS[Math.floor(Math.random() * ASSIGN_EMOJIS.length)];
+      span.className = "pointer-events-none fixed z-[55]";
+      span.style.left = `${originX}px`;
+      span.style.top = `${originY}px`;
+      span.style.fontSize = `${14 + Math.random() * 10}px`;
+      document.body.appendChild(span);
+      const angle = Math.random() * Math.PI * 2;
+      const distance = 30 + Math.random() * 70;
+      gsap.fromTo(
+        span,
+        { opacity: 1, scale: 0.6 },
+        {
+          x: Math.cos(angle) * distance,
+          y: Math.sin(angle) * distance,
+          scale: 1.1,
+          opacity: 0,
+          duration: 0.5 + Math.random() * 0.3,
+          ease: "power2.out",
+          onComplete: () => span.remove(),
+        }
+      );
+    }
   }
 
   function confirmAssign(code, scenarioId) {
@@ -502,6 +589,7 @@
     updateProgress({ animate: true });
     clearActiveZonePreview();
     showActiveCard({ animateIn: true });
+    renderSummary(code);
   }
 
   // ---- Deshacer -----------------------------------------------------------------
@@ -523,10 +611,102 @@
     updateProgress({ animate: true });
     forcedNextCode = entry.code;
     showActiveCard({ animateIn: true });
-    showToast(`Se deshizo: "${movementByCode.get(entry.code).name}".`);
+    renderSummary(entry.prevResolved ? entry.code : undefined);
+    showToast(`😅 ¡Uy! Se deshizo: "${movementByCode.get(entry.code).name}".`);
+    failEvent();
   }
 
   undoBtn.addEventListener("click", undoLast);
+
+  // Pequeño evento cómico de "fail" cada vez que se deshace algo: la pantalla tiembla,
+  // aparece un sello de ❌ que cae girando, y un puñado de emojis de pena salen disparados.
+  const FAIL_EMOJIS = ["😅", "🙈", "💥", "🫠", "😬", "🤦", "⏪"];
+
+  function failEvent() {
+    gsap.fromTo(
+      "body",
+      { x: 0 },
+      { x: 7, duration: 0.05, repeat: 5, yoyo: true, ease: "power1.inOut", onComplete: () => gsap.set("body", { x: 0 }) }
+    );
+
+    const stamp = document.createElement("div");
+    stamp.textContent = "❌";
+    stamp.className = "pointer-events-none fixed left-1/2 top-1/3 z-[60] -translate-x-1/2 -translate-y-1/2 text-7xl";
+    document.body.appendChild(stamp);
+    gsap.fromTo(
+      stamp,
+      { scale: 2.2, opacity: 0, rotation: -20 },
+      {
+        scale: 1,
+        opacity: 1,
+        rotation: 8,
+        duration: 0.35,
+        ease: "back.out(3)",
+        onComplete: () => {
+          gsap.to(stamp, { y: 220, rotation: 90, opacity: 0, duration: 0.6, delay: 0.25, ease: "power2.in", onComplete: () => stamp.remove() });
+        },
+      }
+    );
+
+    for (let i = 0; i < 8; i++) {
+      const span = document.createElement("span");
+      span.textContent = FAIL_EMOJIS[Math.floor(Math.random() * FAIL_EMOJIS.length)];
+      span.className = "pointer-events-none fixed z-[60]";
+      span.style.left = "50%";
+      span.style.top = "33%";
+      span.style.fontSize = `${16 + Math.random() * 14}px`;
+      document.body.appendChild(span);
+      const angle = Math.random() * Math.PI * 2;
+      const distance = 60 + Math.random() * 140;
+      gsap.to(span, {
+        x: Math.cos(angle) * distance,
+        y: Math.sin(angle) * distance + 40,
+        rotation: Math.random() * 180 - 90,
+        opacity: 0,
+        duration: 0.7 + Math.random() * 0.4,
+        ease: "power2.out",
+        onComplete: () => span.remove(),
+      });
+    }
+  }
+
+  // Evento cómico al reiniciar todo: un flash tipo "pantalla en blanco", un 🔄 gigante
+  // que gira y se va, y una barrida de emojis de limpieza saliendo hacia los lados.
+  const RESET_EMOJIS = ["🧹", "💨", "♻️", "🗑️", "🔄"];
+
+  function resetEvent() {
+    const flash = document.createElement("div");
+    flash.className = "pointer-events-none fixed inset-0 z-[60] bg-white dark:bg-zinc-950";
+    document.body.appendChild(flash);
+    gsap.fromTo(flash, { opacity: 0.85 }, { opacity: 0, duration: 0.5, ease: "power1.out", onComplete: () => flash.remove() });
+
+    const icon = document.createElement("div");
+    icon.textContent = "🔄";
+    icon.className = "pointer-events-none fixed left-1/2 top-1/3 z-[61] -translate-x-1/2 -translate-y-1/2 text-7xl";
+    document.body.appendChild(icon);
+    gsap.fromTo(icon, { scale: 0, rotation: 0, opacity: 0 }, { scale: 1, opacity: 1, rotation: 360, duration: 0.6, ease: "power2.out" });
+    gsap.to(icon, { opacity: 0, scale: 0.6, duration: 0.4, delay: 0.5, ease: "power1.in", onComplete: () => icon.remove() });
+
+    for (let i = 0; i < 14; i++) {
+      const span = document.createElement("span");
+      span.textContent = RESET_EMOJIS[Math.floor(Math.random() * RESET_EMOJIS.length)];
+      span.className = "pointer-events-none fixed z-[60]";
+      span.style.left = "50%";
+      span.style.top = "40%";
+      span.style.fontSize = `${16 + Math.random() * 16}px`;
+      document.body.appendChild(span);
+      const goingRight = i % 2 === 0;
+      gsap.to(span, {
+        x: (goingRight ? 1 : -1) * (window.innerWidth * 0.4 + Math.random() * 120),
+        y: (Math.random() - 0.5) * 160,
+        rotation: Math.random() * 360 - 180,
+        opacity: 0,
+        duration: 0.6 + Math.random() * 0.4,
+        ease: "power1.out",
+        onComplete: () => span.remove(),
+      });
+    }
+  }
 
   // ---- Progreso -----------------------------------------------------------------
   let wasComplete = false;
@@ -549,32 +729,98 @@
   function celebrate() {
     showToast("🎉 ¡Todos los movimientos están categorizados!");
     gsap.fromTo("#progressWrap", { scale: 1 }, { scale: 1.03, duration: 0.18, ease: "power1.out", yoyo: true, repeat: 1 });
+    emojiCelebration();
   }
 
-  // ---- Resumen ------------------------------------------------------------------
-  function renderSummary() {
+  // Explosión de emojis desde el centro + lluvia cayendo por un par de segundos.
+  const CELEBRATION_EMOJIS = ["🎉", "✨", "🎊", "🥳", "💫", "🏆", "🔥", "🙌", "⭐"];
+
+  function emojiCelebration() {
+    const layer = document.createElement("div");
+    layer.className = "pointer-events-none fixed inset-0 z-[60] overflow-hidden";
+    document.body.appendChild(layer);
+
+    function spawnEmoji(style) {
+      const span = document.createElement("span");
+      span.textContent = CELEBRATION_EMOJIS[Math.floor(Math.random() * CELEBRATION_EMOJIS.length)];
+      span.style.position = "absolute";
+      Object.assign(span.style, style);
+      layer.appendChild(span);
+      return span;
+    }
+
+    // Explosión desde el centro de la pantalla.
+    const originX = window.innerWidth / 2;
+    const originY = window.innerHeight * 0.4;
+    for (let i = 0; i < 26; i++) {
+      const span = spawnEmoji({ left: `${originX}px`, top: `${originY}px`, fontSize: `${18 + Math.random() * 20}px` });
+      const angle = Math.random() * Math.PI * 2;
+      const distance = 100 + Math.random() * 260;
+      gsap.to(span, {
+        x: Math.cos(angle) * distance,
+        y: Math.sin(angle) * distance,
+        rotation: Math.random() * 360 - 180,
+        opacity: 0,
+        duration: 0.8 + Math.random() * 0.5,
+        ease: "power2.out",
+        onComplete: () => span.remove(),
+      });
+    }
+
+    // Lluvia de emojis cayendo desde arriba.
+    const rainInterval = setInterval(() => {
+      const span = spawnEmoji({ left: `${Math.random() * window.innerWidth}px`, top: "-40px", fontSize: `${16 + Math.random() * 18}px` });
+      gsap.to(span, {
+        y: window.innerHeight + 60,
+        x: `+=${(Math.random() - 0.5) * 140}`,
+        rotation: Math.random() * 360,
+        duration: 2 + Math.random() * 1.5,
+        ease: "power1.in",
+        onComplete: () => span.remove(),
+      });
+    }, 90);
+
+    setTimeout(() => {
+      clearInterval(rainInterval);
+      setTimeout(() => layer.remove(), 3000);
+    }, 2200);
+  }
+
+  // ---- Resumen (siempre visible, se re-dibuja en cada asignación) ----------------
+  // `highlightCode` es el código que se acaba de mover — su fila entra con una animación
+  // de "llegada" y un flash de color; el resto del panel no vuelve a animarse cada vez.
+  // Cada categoría es colapsable — `collapsedScenarios` recuerda cuáles están cerradas
+  // entre un re-render y el siguiente (dura mientras la pestaña esté abierta).
+  // Por default arrancan todas colapsadas.
+  const collapsedScenarios = new Set(SCENARIOS.map((s) => s.id));
+
+  function renderSummary(highlightCode) {
     summaryGroups.innerHTML = "";
     SCENARIOS.forEach((scenario) => {
       const accent = ACCENT_CLASSES[scenario.accent];
       const items = MOVEMENTS.filter((m) => isResolved(m.code) && state.assignments[m.code] === scenario.id);
+      const isCollapsed = collapsedScenarios.has(scenario.id);
 
       const group = document.createElement("div");
       group.className = "rounded-xl border border-zinc-200 bg-white shadow-card dark:border-zinc-800 dark:bg-zinc-900";
       group.innerHTML = `
-        <div class="flex items-center gap-2 border-b border-zinc-100 p-3 dark:border-zinc-800">
-          <span class="h-2.5 w-2.5 rounded-full ${accent.dot}"></span>
+        <button type="button" class="flex w-full items-center gap-2 p-3 text-left" data-collapse-toggle>
+          <span class="h-2.5 w-2.5 shrink-0 rounded-full ${accent.dot}"></span>
           <span class="text-sm font-semibold text-zinc-800 dark:text-zinc-100">${scenario.icon} ${scenario.name}</span>
           <span class="ml-auto text-xs text-zinc-400 dark:text-zinc-500">${items.length} movimiento${items.length === 1 ? "" : "s"}</span>
-        </div>
-        <div class="divide-y divide-zinc-100 dark:divide-zinc-800" data-list></div>
+          <span class="text-zinc-400 dark:text-zinc-500" data-chevron>▾</span>
+        </button>
+        <div class="overflow-hidden" data-list></div>
       `;
       const list = group.querySelector("[data-list]");
+      const chevron = group.querySelector("[data-chevron]");
       if (items.length === 0) {
-        list.innerHTML = `<div class="p-3 text-xs text-zinc-400 dark:text-zinc-500">Nada categorizado aquí todavía.</div>`;
+        list.innerHTML = `<div class="border-t border-zinc-100 p-3 text-xs text-zinc-400 dark:border-zinc-800 dark:text-zinc-500">Nada categorizado aquí todavía.</div>`;
       } else {
         items.forEach((m) => {
           const row = document.createElement("div");
-          row.className = "flex items-center gap-3 p-3";
+          row.className = "flex items-center gap-3 border-t border-zinc-100 p-3 first:border-t-0 dark:border-zinc-800";
+          row.dataset.code = m.code;
           row.innerHTML = `
             <span class="badge">${m.code}</span>
             <span class="flex-1 text-sm text-zinc-700 dark:text-zinc-300">${m.name}</span>
@@ -583,11 +829,31 @@
           list.appendChild(row);
         });
       }
+
+      if (isCollapsed) {
+        gsap.set(list, { height: 0 });
+        gsap.set(chevron, { rotate: -90 });
+      }
+
+      group.querySelector("[data-collapse-toggle]").addEventListener("click", () => {
+        const nowCollapsed = !collapsedScenarios.has(scenario.id);
+        if (nowCollapsed) {
+          collapsedScenarios.add(scenario.id);
+          gsap.to(list, { height: 0, duration: 0.25, ease: "power1.inOut" });
+          gsap.to(chevron, { rotate: -90, duration: 0.25, ease: "power1.inOut" });
+        } else {
+          collapsedScenarios.delete(scenario.id);
+          gsap.to(list, { height: list.scrollHeight, duration: 0.25, ease: "power1.inOut" });
+          gsap.to(chevron, { rotate: 0, duration: 0.25, ease: "power1.inOut" });
+        }
+      });
+
       summaryGroups.appendChild(group);
     });
 
     summaryGroups.querySelectorAll("[data-reassign]").forEach((btn) => {
-      btn.addEventListener("click", () => {
+      btn.addEventListener("click", (event) => {
+        event.stopPropagation();
         const code = btn.dataset.reassign;
         pushUndo(code);
         markUnresolved(code);
@@ -595,30 +861,29 @@
         updateZoneCounts();
         updateProgress();
         forcedNextCode = code;
-        showSummary(false);
+        renderSummary();
         showToast(`"${movementByCode.get(code).name}" vuelve al mazo.`);
       });
     });
-  }
 
-  function showSummary(show) {
-    summaryPanel.classList.toggle("open", show);
-    summaryBackdrop.classList.toggle("hidden", !show);
-    summaryToggleBtn.textContent = show ? "✕ Cerrar resumen" : "📋 Ver resumen";
-    if (show) {
-      renderSummary();
-      gsap.from(summaryGroups.children, { opacity: 0, y: 10, stagger: 0.05, duration: 0.3, ease: "power2.out" });
+    if (highlightCode) {
+      // Si la categoría destino estaba colapsada, ábrela para que se vea la tarjeta que llegó.
+      const scenarioId = state.assignments[highlightCode];
+      collapsedScenarios.delete(scenarioId);
+      const row = summaryGroups.querySelector(`[data-code="${highlightCode}"]`);
+      if (row) {
+        const list = row.closest("[data-list]");
+        gsap.set(list, { height: "auto" });
+        const chevron = list.previousElementSibling.querySelector("[data-chevron]");
+        gsap.set(chevron, { rotate: 0 });
+        gsap.fromTo(
+          row,
+          { opacity: 0, y: -14, scale: 0.94, backgroundColor: "rgba(99,102,241,0.28)" },
+          { opacity: 1, y: 0, scale: 1, backgroundColor: "rgba(99,102,241,0)", duration: 0.6, ease: "back.out(1.5)" }
+        );
+      }
     }
   }
-
-  const summaryBackdrop = document.getElementById("summaryBackdrop");
-  const summaryCloseBtn = document.getElementById("summaryCloseBtn");
-
-  summaryToggleBtn.addEventListener("click", () => {
-    showSummary(!summaryPanel.classList.contains("open"));
-  });
-  summaryCloseBtn.addEventListener("click", () => showSummary(false));
-  summaryBackdrop.addEventListener("click", () => showSummary(false));
 
   // ---- Toast ----------------------------------------------------------------
   let toastTimer = null;
@@ -755,11 +1020,18 @@
     updateZoneCounts();
     updateProgress({ animate: true });
     showActiveCard({ animateIn: true });
+    renderSummary();
   }
 
   // ---- Reiniciar ------------------------------------------------------------
-  document.getElementById("resetBtn").addEventListener("click", () => {
-    if (!confirm("¿Reiniciar toda la categorización? Esto no se puede deshacer.")) return;
+  document.getElementById("resetBtn").addEventListener("click", async () => {
+    const confirmed = await showConfirm({
+      title: "¿Reiniciar toda la categorización?",
+      message: "Se perderá todo tu progreso actual guardado en este navegador. Esta acción no se puede deshacer.",
+      confirmLabel: "Sí, reiniciar",
+    });
+    if (!confirmed) return;
+
     state = defaultState();
     state.resolved = {};
     forcedNextCode = null;
@@ -770,8 +1042,10 @@
     persist();
     updateZoneCounts();
     updateProgress();
-    showSummary(false);
-    showToast("Configuración reiniciada.");
+    renderSummary();
+    showActiveCard({ animateIn: true });
+    showToast("🧹 Configuración reiniciada — empezamos de cero.");
+    resetEvent();
   });
 
   // ---- Bonus: cargar configuración desde una URL (?config=<url-raw-csv>) -------
@@ -795,6 +1069,7 @@
   renderZones();
   updateProgress();
   showActiveCard({ animateIn: true });
+  renderSummary();
 })();
 </script>
 </body>
